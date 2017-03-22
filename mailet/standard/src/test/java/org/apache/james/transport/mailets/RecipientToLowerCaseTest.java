@@ -20,38 +20,74 @@
 package org.apache.james.transport.mailets;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertEquals;
 
+import java.util.ArrayList;
+import java.util.Collection;
+
+import javax.mail.MessagingException;
+
+import org.apache.mailet.MailAddress;
+import org.apache.mailet.base.test.FakeMail;
 import org.junit.Before;
 import org.junit.Test;
 
 public class RecipientToLowerCaseTest {
 
-    private RecipientToLowerCase testee;
+	private RecipientToLowerCase testee;
 
-    @Before
-    public void setUp() {
-        testee = new RecipientToLowerCase();
-    }
+	@Before
+	public void setUp() {
+		testee = new RecipientToLowerCase();
+	}
 
-    @Test
-    public void serviceShouldPutRecipientToLowerCase() {
-        /*
-        Question 1
+	@Test
+	public void serviceShouldPutRecipientToLowerCase() throws Exception {
+		/*
+		 * Question 1
+		 * 
+		 * - Create a FakeMail (threw builder()) with an address containing
+		 * Upper case as Recipient - Process it with the mailet - It should have
+		 * the recipient as lowerCase after processing
+		 */
 
-         - Create a FakeMail (threw builder()) with an address containing Upper case as Recipient
-         - Process it with the mailet
-         - It should have the recipient as lowerCase after processing
-         */
-    }
+		FakeMail fakeMail = FakeMail.builder().recipient(new MailAddress("VanTuan@gmail.com")).build();
 
-    @Test
-    public void serviceShouldHaveNoEffectWhenNoRecipient() {
-        /*
-        Question 2
-        
-         - Create a FakeMail (threw builder()) without recipients
-         - Process it with the mailet
-         - It should have no recipient after processing
-         */
-    }
+		testee.service(fakeMail);
+
+		// when fake return string -- it is a ignore case - so we need to
+		// convert it to string
+
+		Collection<MailAddress> result = fakeMail.getRecipients();
+
+		ArrayList<String> resultAsString = new ArrayList<String>();
+
+		for (MailAddress address : result) {
+			resultAsString.add(address.toString());
+		}
+
+		assertThat(resultAsString).containsOnly("vantuan@gmail.com");
+	}
+
+	@Test
+	public void serviceShouldHaveNoEffectWhenNoRecipient() throws Exception {
+		/*
+		 * Question 2
+		 * 
+		 * - Create a FakeMail (threw builder()) without recipients - Process it
+		 * with the mailet - It should have no recipient after processing
+		 */
+
+		FakeMail fakeMail = FakeMail.builder().build();
+
+		Collection<MailAddress> result = fakeMail.getRecipients();
+
+		ArrayList<String> resultAsString = new ArrayList<String>();
+
+		for (MailAddress address : result) {
+			resultAsString.add(address.toString());
+		}
+		
+		assertThat(resultAsString).isEmpty();
+	}
 }
