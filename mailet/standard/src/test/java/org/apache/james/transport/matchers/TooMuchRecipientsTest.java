@@ -19,105 +19,103 @@
 
 package org.apache.james.transport.matchers;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
+import org.apache.mailet.MailAddress;
+import org.apache.mailet.base.test.FakeMail;
+import org.apache.mailet.base.test.FakeMatcherConfig;
+import org.apache.james.transport.matchers.TooMuchRecipients;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import com.google.common.collect.ImmutableList;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.util.Collection;
+
+import javax.mail.MessagingException;
+
 public class TooMuchRecipientsTest {
+	
+	@Rule
+	public ExpectedException expectedException = ExpectedException.none();
+	
+	private TooMuchRecipients testee;
 
-    @Rule
-    public ExpectedException expectedException = ExpectedException.none();
+	@Before
+	public void setUp() {
+		testee = new TooMuchRecipients();
+	}
 
-    private TooMuchRecipients testee;
+	@Test(expected = MessagingException.class)
+	public void initShouldThrowOnAbsentCondition() throws MessagingException {
+		testee.init(FakeMatcherConfig.builder().matcherName("matcherName").build());
+	}
 
-    @Before
-    public void setUp() {
-        testee = new TooMuchRecipients();
-    }
+	@Test(expected = NumberFormatException.class)
+	public void initShouldThrowOnInvalidCondition() throws Exception {
+		testee.init(FakeMatcherConfig.builder().condition("a").matcherName("matcherName").build());
+	}
 
-    @Test
-    public void initShouldThrowOnAbsentCondition() {
-        /*
-        What happens if there is no condition?
+	@Test(expected = NumberFormatException.class)
+	public void initShouldThrowOnEmptyCondition() throws Exception {
+		testee.init(FakeMatcherConfig.builder().condition("").matcherName("matcherName").build());
+	}
 
-        We should throw an exception
-         */
-    }
+	@Test(expected = MessagingException.class)
+	public void initShouldThrowOnZeroCondition() throws Exception {
+		testee.init(FakeMatcherConfig.builder().condition("0").matcherName("matcherName").build());
+	}
 
-    @Test
-    public void initShouldThrowOnInvalidCondition() {
-        /*
-        What happens when condition is not a number? We should throw.
-         */
-    }
+	@Test(expected = MessagingException.class)
+	public void initShouldThrowOnNegativeCondition() throws Exception {
+		testee.init(FakeMatcherConfig.builder().condition("-20").matcherName("matcherName").build());
+	}
 
-    @Test
-    public void initShouldThrowOnEmptyCondition() {
-        /*
-        What happens when condition is empty? We should throw.
-         */
-    }
+	@Test
+	public void matchShouldReturnNoRecipientWhenMailHaveNoRecipient() throws Exception {
+		testee.init(FakeMatcherConfig.builder().condition("3").matcherName("matcherName").build());
+		Collection<MailAddress> listMailAddress = testee.match(FakeMail.builder().build());
+		assertThat(listMailAddress).isEmpty();
+	}
 
-    @Test
-    public void initShouldThrowOnZeroCondition() {
-        /*
-        What happens when condition is zero? We should throw.
-         */
-    }
+	@Test
+	public void matchShouldAcceptMailsUnderLimit() throws Exception {
+		testee.init(FakeMatcherConfig.builder().condition("3").matcherName("matcherName").build());
+		Collection<MailAddress> listMailAddress = testee
+				.match(FakeMail.builder().recipient(new MailAddress("tuan@gmail.com")).build());
+		assertThat(listMailAddress).isEmpty();
+	}
 
-    @Test
-    public void initShouldThrowOnNegativeCondition() {
-        /*
-        What happens when condition is negative? We should throw.
-         */
-    }
+	@Test
+	public void matchShouldAcceptMailsAtLimit() throws Exception {
+		testee.init(FakeMatcherConfig.builder().condition("3").matcherName("matcherName").build());
+		
+		ImmutableList<MailAddress> recipients = ImmutableList.of(new MailAddress("tuan@gmail.com"),
+				new MailAddress("phuc@gmail.com"), 
+				new MailAddress("da@gmail.com"));
+		
+		Collection<MailAddress> listMailAddress = testee
+				.match(FakeMail.builder().recipients(recipients).build());
+		assertThat(listMailAddress).isEmpty();
+	}
 
-    @Test
-    public void matchShouldReturnNoRecipientWhenMailHaveNoRecipient() {
-        /*
-        Start the matcher with condition = 3
-
-        What happens with a mail with 0 recipients?
-
-        We should return empty list
-         */
-    }
-
-    @Test
-    public void matchShouldAcceptMailsUnderLimit() {
-        /*
-        Start the matcher with condition = 3
-
-        What happens with a mail with 1 recipients?
-
-        We should return empty list
-         */
-    }
-
-
-    @Test
-    public void matchShouldAcceptMailsAtLimit() {
-        /*
-        Start the matcher with condition = 3
-
-        What happens with a mail with 3 recipients?
-
-        We should return empty list
-         */
-    }
-    
-    @Test
-    public void matchShouldRejectMailsOverLimit() {
-        /*
-        Start the matcher with condition = 3
-
-        What happens with a mail with 4 recipients?
-
-        We should return the list of Recipients
-         */
-    }
+	@Test
+	public void matchShouldRejectMailsOverLimit() throws Exception {
+		
+		testee.init(FakeMatcherConfig.builder().condition("3").matcherName("matcherName").build());
+		
+		ImmutableList<MailAddress> recipients = ImmutableList.of(new MailAddress("tuan@gmail.com"),
+				new MailAddress("phuc@gmail.com"), 
+				new MailAddress("da@gmail.com"),
+				new MailAddress("cuong@gmail.com"));
+		
+		Collection<MailAddress> listMailAddress = testee
+				.match(FakeMail.builder().recipients(
+						recipients).build());
+		
+		assertThat(listMailAddress).isEqualTo(listMailAddress);
+	}
 
 }
